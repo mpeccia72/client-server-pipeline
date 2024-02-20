@@ -1,0 +1,199 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS 33600 - Homework 2</title>
+  <meta name="description" content="CS 33600 Homework 2">
+  <meta name="author" content="Roger L. Kraft">
+  <link rel="stylesheet" href="http://math.pnw.edu/~rlkraft/roger-v2.css">
+  <!--[if lt IE 9]>
+    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+<!--
+<header>
+  <a href="http://math.pnw.edu/~rlkraft/" title="Roger L. Kraft">Roger L. Kraft</a>
+</header>
+ -->
+<nav>
+  <ul class="nav-list" role="navigation">
+    <li><a href="../cs33600.html">CS 33600</a></li>
+    <li><a href="../syllabus.html">Syllabus</a></li>
+    <li><a href="../class.html">Lectures and Readings</a></li>
+    <li><a href="../homework.html">Homework Assignments</a></li>
+  </ul>
+  <ul class="nav-list" role="navigation">
+    <li><a href="http://math.pnw.edu/~rlkraft/roger.html">Roger Kraft</a></li>
+    <li><a href="https://pnw.edu/computer-science/">Computer Science Department</a></li>
+    <li><a href="https://pnw.edu/engineering/">School of Engineering</a></li>
+    <li><a href="https://pnw.edu/college-of-engineering-sciences/">College of Engineering & Sciences</a></li>
+    <li><a href="https://pnw.edu/">Purdue University Northwest</a></li>
+  </ul>
+</nav>
+
+<section id="Content">
+<h1>
+Programming Assignment 2<br>
+CS 33600<br>
+Network Programming<br>
+Spring, 2024
+</h1>
+
+<p>
+This assignment makes use of the files contained in this <a href="hw2.zip">zip file</a>.
+This assignment is due Monday, February 26.
+</p>
+
+<p>
+This assignment simulates a server process communicating with a client process using a "binary message protocol". In the zip file there is a file <code>Server.java</code> that implements the server. Your assignment is to implement the client program, <code>Client.java</code>.
+</p>
+
+<p>
+The server program "sends" messages to the client program by writing the messages to standard output. The client program should "receive" messages by reading them from standard input. So the command line
+</p>
+<pre>
+   &gt; java Server 10 | java Client
+</pre>
+<p>
+uses a pipe to simulate the communication channel from the server to the client (the server's command-line argument 10 tells the server to send 10 messages to the client).
+</p>
+
+<p>
+Here is a description of the message protocol used by the server. Each message begins with a single byte that is a "message header". There are three kinds of messages, a "numeric message", a "text message", and an "end-of-transmision" message. After a message header will be the "body" of the message (except for the end-of-transmission message which has no message body; it consists of just the message header byte).
+</p>
+
+<p>
+The message header for the end-of-transmission message is <code>0x80</code> (in hexadecimal). The meaning of this message header is that there are no more messages and the server will close its output stream, and the client should close its input stream.
+</p>
+
+<p>
+The message header for a "text message" has its most significant bit set to <code>1</code> and its seven least significant bits set to an integer value between 1 and 127. The meaning of this message header is that it will be followed by the given number of printable <a href="https://ss64.com/ascii.html">ASCII</a> characters (hexadecimal <code>0x20</code> through <code>0x7E</code>), which the client should read.
+</p>
+
+<p>
+The message header for the "numeric message" has its most significant bit set to <code>0</code>. The remaining seven bits are a <a href="https://en.wikipedia.org/wiki/Bit_field">bit field</a> with the following meaning. A <code>0</code> bit tells the client to expect an <code>int</code> value to be sent to it by the server. A <code>1</code> bit tells the client to expect a <code>double</code> value to be sent to it by the server. The client should read the bits from least significant bit to most significant bit. So, for example, if the message header in hexadecimal is <code>0x39</code> (or binary <code>00111001</code>), then the client should expect to receive, in order, one double, then two ints, then three doubles, followed by one int.
+</p>
+
+<p>
+The eight bytes of a double are sent by the server in <a href="https://www.google.com/search?q=little+endian">little-endian byte order</a>. That means that the server sends the least significant byte of a double first, followed by the second-least significant byte, etc. for all eight bytes of the double (for example, see <a href="https://images.squarespace-cdn.com/content/v1/549dcda5e4b0a47d0ae1db1e/1490746414666-EM74IA60AFM16OEH9G22/image-asset.png">this</a> or <a href="https://open4tech.com/wp-content/uploads/2020/05/little_endian_vs_big_endian.png">this</a> picture). (Java stores <code>double</code> values in big-endian byte order, so the byte order used by the server program is not the same as Java's byte order.)
+</p>
+
+<p>
+The four bytes of an int are sent by the server in "weird-endian" byte order. For the purpose of this assignment, the weird-endian byte order means that the server will first send the third-most significant byte of the int, followed by the second-most significant byte, followed by the most significant byte, followed by the int's least significant byte. (Java stores <code>int</code> values in big-endian byte order.)
+</p>
+
+<p>
+In order to work with the bytes of a <code>double</code> in little-endian order, or the bytes of an <code>int</code> in weird-endian order, you need to use Java's <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html">ByteBuffer</a> class. The <code>ByteBufer</code> class has methods that let you convert an <code>int</code> or <code>double</code> into an array of bytes (in big-endian byte order). And there are methods that let you convert an array of four bytes into an <code>int</code> value and an array of eight bytes into a <code>double</code> value.
+</p>
+
+<p>
+The <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html#putInt(int)">putInt()</a> and <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html#putDouble(double)">putDouble()</a> methods let you convert an <code>int</code> value or a <code>double</code> value into its appropriate byte values in a <code>ByteBuffer</code> object. Then the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html#array()">array()</a> method constructs a <code>byte[]</code> object from the <code>ByteBuffer</code> object. For example, the following line of code creates an array of four bytes holding the bytes that represent the <code>int</code> value <code>12345</code>.
+</p>
+<pre>
+    byte[] b = ByteBuffer.allocate(Integer.BYTES).putInt(12345).array();
+</pre>
+<p>
+The following line of code creates an array of eight bytes holding the bytes that represent the <code>double</code> value <code>12345.0</code>.
+</p>
+<pre>
+    byte[] b = ByteBuffer.allocate(Double.BYTES).putDouble(12345.0).array();
+</pre>
+
+<p>
+For the other direction, from byte array to <code>int</code> or <code>double</code> value, the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html#wrap(byte%5B%5D)">wrap()</a> method constructs a <code>ByteBuffer</code> object from a <code>byte[]</code> object, and the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html#getInt()">getInt()</a> and <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html#getDouble()">getDouble()</a> methods convert an appropriately sized <code>ByteBuffer</code> into an <code>int</code> or <code>double</code> value. For example, the following line of code returns the <code>int</code> value of the four bytes in the given <code>byte[]</code> object.
+</p>
+<pre>
+    int n = ByteBuffer.wrap(new byte[]{4, 3, 2, 1}).getInt();
+</pre>
+
+<p>
+The following line of code returns the <code>double</code> value of the eight bytes in the given <code>byte[]</code> object.
+</p>
+<pre>
+    double d = ByteBuffer.wrap(new byte[]{8, 7, 6, 5, 4, 3, 2, 1}).getDouble();
+</pre>
+
+<p>
+You can experiment with these <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html">ByteBuffer</a> methods using the following program in the Java Visualizer.
+</p>
+<ul>
+   <li><a href="https://cscircles.cemc.uwaterloo.ca/java_visualize/#code=import+java.nio.ByteBuffer%3B%0Aimport+java.util.Arrays%3B%0A%0Apublic+class+TestByteBuffer%0A%7B%0A+++public+static+void+main(String%5B%5D+args)%0A+++%7B%0A++++++//+int+to+byte%5B%5D%0A++++++byte%5B%5D+b1+%3D+ByteBuffer.allocate(Integer.BYTES).putInt(12345).array()%3B%0A++++++System.out.println(Arrays.toString(+b1+))%3B%0A%0A++++++//+double+to+byte%5B%5D%0A++++++byte%5B%5D+b2+%3D+ByteBuffer.allocate(Double.BYTES).putDouble(12345.0).array()%3B%0A++++++System.out.println(Arrays.toString(+b2+))%3B%0A%0A++++++//+byte%5B%5D+to+int%0A++++++int+n+%3D+ByteBuffer.wrap(new+byte%5B%5D%7B0,+0,+48,+57%7D).getInt()%3B%0A++++++System.out.println(+n+)%3B%0A%0A++++++//+byte%5B%5D+to+double%0A++++++byte%5B%5D+b3+%3D+%7B64,+-56,+28,+-128,+0,+0,+0,+0%7D%3B%0A++++++double+d+%3D+ByteBuffer.wrap(+b3+).getDouble()%3B%0A++++++System.out.println(+d+)%3B%0A+++%7D%0A%7D&mode=edit">TestByteBuffer.java</a></li>
+</ul>
+
+<p>
+Also, look at the file <code>Server.java</code> for more example code that uses <code>ByteBuffer</code> and <code>byte[]</code> objects.
+</p>
+
+<p>
+Write a program <code>Client.java</code> that implements the receiving end of the above protocol. Besides implementing the above protocol, your <code>Client.java</code> program should do a few other things. The client should keep track of how many bytes it is receiving from the server. After receiving an end-of-transmision message, the client should print out its count of the total number of bytes it received from the server. If the client should detect an end-of-file condition before receiving an end-of-transmission message, the client should print an error message that includes the number of bytes it has received so far from the server. The client should also print to standard output the contents of each text message and each numeric message.
+</p>
+
+<p>
+Your client program should read its standard input stream one byte at a time (using the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/InputStream.html#read()">read()</a> method from <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/InputStream.html">InputStream</a>). After <b>every</b> byte, your program should check for end-of-file. Your program should not assume that it gets reliable data from the server. The data from the server may unexpectedly end at any point in the input stream. Your program should not crash on an unexpected end-of-file.
+</p>
+
+<p>
+To help you debug your <code>Client.java</code> program, each time the server program is run it logs all the messages it sends to the client into a text file called <code>log_file.txt</code>. The log file contains very verbose versions of the messages sent to the client. The log file shows the message headers in binary number notation, it shows the double and integer numbers in both decimal and hexadecimal formats (in the transmitted byte order), and it tells you the length of the text messages in decimal format.
+</p>
+
+<p>
+Each time you run the server program, it creates a random set of messages. If you want to test your client program with a repeatable set of messages, run the server one time and capture its (binary) output in a file.
+</p>
+<pre>
+   &gt; java Server 5 > data
+</pre>
+<p>
+Then run your client as many times as you want with the <code>data</code> file as its input.
+</p>
+<pre>
+   &gt; java Client < data
+</pre>
+<p>
+When you do this, be sure to keep a copy of the server's <code>log_file.txt</code>. It will help you determine if your client's output is correct.
+</p>
+
+<p>
+You can test that your client program handles an unexpected end-of-file by taking a saved <code>data</code> file and deleting some data from the end of the file. When you feed that truncated <code>data</code> file into your client program, the program should report that it detected an unexpected end-of-file.
+</p>
+
+<p>
+In the zip file for this assignment you will find an <a href="https://docs.oracle.com/javase/tutorial/deployment/jar/run.html">executable jar file</a> demo program called <code>client_demo.jar</code> that you can use to demo this assignment. You can pipe the output from <code>Server</code> into the demo program with this command-line.
+</p>
+<pre>
+     &gt; java Server 5 | java -jar client_demo.jar
+</pre>
+<p>
+Or you can run the demo program on a saved data file with this command-line.
+</p>
+<pre>
+     &gt; java -jar client_demo.jar < data
+</pre>
+<p>
+Your version of <code>Client.java</code> should behave exactly like the demo version.
+</p>
+
+<p>
+<a href="http://cs.pnw.edu/~rlkraft/cs33600/handin.html">Turn in</a> a zip file called <code>CS336Hw2Surname.zip</code> (where <code>Surname</code> is your last name) containing your version of <code>Client.java</code>.
+</p>
+
+<p>
+This assignment is due Monday, February 26.
+</p>
+
+</section>
+
+<footer>
+  <script language="JavaScript" type="text/javascript">
+    document.write("<font size=\"-2\"><i>Last modified on " + document.lastModified + ".<\/i><\/font>");
+  </script>
+  <br>
+  <a href="mailto:rlkraft@pnw.edu"><font size="-2"><i>compliments and criticisms</i></font></a>
+</footer>
+
+</body>
+</html>
